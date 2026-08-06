@@ -48,6 +48,14 @@ StratifiedKFold), `Matplotlib`, `Seaborn`, `joblib`
 - **Feature importance** is read from `feature_importances_` when the final model exposes
   it and from `coef_` when it does not, so the report works whichever model wins.
 
+  ## Results
+
+![ROC curves](outputs/roc_curves.png)
+
+![Confusion matrices](outputs/confusion_matrices.png)
+
+![Feature importance](outputs/feature_importance.png)
+
 ## How to run
 
 ```bash
