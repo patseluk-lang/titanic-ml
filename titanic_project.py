@@ -53,9 +53,7 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'outputs')
 os.makedirs(OUT, exist_ok=True)
 
 
-# =============================================================================
 # 1. PROBLEM DEFINITION
-# =============================================================================
 # Task: binary classification. Predict Survived (0/1) from the passenger's
 # demographic and ticket features.
 # Metric: accuracy (primary) + F1/ROC-AUC (due to class imbalance ~62/38).
@@ -64,9 +62,7 @@ print("1. PROBLEM DEFINITION: binary classification of Survived (0/1)")
 print("=" * 70)
 
 
-# =============================================================================
 # 2. DATA COLLECTION
-# =============================================================================
 URL = 'https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv'
 RAW_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'titanic_raw.csv')
 
@@ -92,16 +88,14 @@ info = pd.DataFrame({
 print(info.to_string())
 
 
-# =============================================================================
 # 3. DATA CLEANING AND PREPROCESSING
-# =============================================================================
 print("\n" + "=" * 70)
 print("3. DATA CLEANING")
 print("=" * 70)
 
 df_clean = df.copy()
 
-# --- Title from Name (before dropping Name) ---
+# Title from Name (before dropping Name)
 df_clean['Title'] = df_clean['Name'].str.extract(r',\s*([^\.]+)\.', expand=False).str.strip()
 title_map = {
     'Mr': 'Mr', 'Miss': 'Miss', 'Mrs': 'Mrs', 'Master': 'Master',
@@ -113,8 +107,8 @@ title_map = {
 df_clean['Title'] = df_clean['Title'].map(title_map).fillna('Rare')
 print(f"\n   Title (from Name):\n{df_clean['Title'].value_counts().to_string()}")
 
-# --- Age: median within the group (Title + Pclass);
-#     if every value in a group is NaN (no median), fall back to the global median ---
+# Age: median within the group (Title + Pclass);
+#     if every value in a group is NaN (no median), fall back to the global median
 before = df_clean['Age'].isnull().sum()
 df_clean['Age'] = df_clean.groupby(['Title', 'Pclass'])['Age'].transform(
     lambda s: s.fillna(s.median()))
@@ -124,31 +118,29 @@ df_clean['Age'] = df_clean['Age'].fillna(df_clean['Age'].median())
 print(f"\n   Age: filled {before} missing values with the group median (Title x Pclass); "
       f"leftovers with the global median")
 
-# --- Embarked: mode (only 2 missing values) ---
+# Embarked: mode (only 2 missing values)
 before = df_clean['Embarked'].isnull().sum()
 df_clean['Embarked'] = df_clean['Embarked'].fillna(df_clean['Embarked'].mode()[0])
 print(f"   Embarked: filled {before} missing values with the mode ('{df_clean['Embarked'].mode()[0]}')")
 
-# --- Fare: median per Pclass ---
+# Fare: median per Pclass
 df_clean['Fare'] = df_clean.groupby('Pclass')['Fare'].transform(
     lambda s: s.fillna(s.median()))
 
-# --- Cabin: 77% missing -> not imputed; the deck and a flag are extracted instead ---
+# Cabin: 77% missing -> not imputed; the deck and a flag are extracted instead
 df_clean['Deck'] = df_clean['Cabin'].str[0].fillna('U')          # U = Unknown
 df_clean['Deck'] = df_clean['Deck'].replace('T', 'U')            # 'T' - 1 passenger, no signal
 df_clean['HasCabin'] = df_clean['Cabin'].notnull().astype(int)
 print(f"   Cabin: 77% missing -> replaced by Deck (first letter) + HasCabin (0/1)")
 
-# --- Drop the features that carry no signal ---
+# Drop the features that carry no signal
 drop_cols = ['PassengerId', 'Name', 'Ticket', 'Cabin']
 df_clean = df_clean.drop(columns=drop_cols)
 print(f"   Dropped: {drop_cols} (Name -> Title, Cabin -> Deck already extracted)")
 print(f"\n   Missing values left: {df_clean.isnull().sum().sum()}")
 
 
-# =============================================================================
 # 4. EXPLORATORY DATA ANALYSIS
-# =============================================================================
 print("\n" + "=" * 70)
 print("4. EDA")
 print("=" * 70)
@@ -161,7 +153,7 @@ for col in ['Sex', 'Pclass', 'Embarked', 'Title']:
 
 print(f"\n   Numeric features:\n{df_clean[['Age', 'Fare', 'SibSp', 'Parch']].describe().round(2).to_string()}")
 
-# --- EDA plots ---
+# EDA plots
 fig, axes = plt.subplots(2, 3, figsize=(18, 10))
 fig.suptitle('EDA: Titanic Survival', fontsize=16, fontweight='bold')
 
@@ -193,7 +185,7 @@ plt.tight_layout()
 plt.savefig(os.path.join(OUT, 'eda_overview.png'), dpi=110, bbox_inches='tight')
 plt.close()
 
-# --- Correlation matrix ---
+# Correlation matrix
 num_df = df_clean.copy()
 num_df['Sex_n'] = (num_df['Sex'] == 'male').astype(int)
 corr = num_df[['Survived', 'Pclass', 'Sex_n', 'Age', 'SibSp', 'Parch', 'Fare', 'HasCabin']].corr()
@@ -208,9 +200,7 @@ print(f"\n   Correlation with Survived:\n{corr['Survived'].drop('Survived').sort
 print("\n   Plots: eda_overview.png, correlation.png")
 
 
-# =============================================================================
 # 5. FEATURE ENGINEERING
-# =============================================================================
 print("\n" + "=" * 70)
 print("5. FEATURE ENGINEERING")
 print("=" * 70)
@@ -260,9 +250,7 @@ preprocessor = ColumnTransformer([
 ])
 
 
-# =============================================================================
 # 6. MODEL SELECTION
-# =============================================================================
 print("\n" + "=" * 70)
 print("6. MODEL SELECTION")
 print("=" * 70)
@@ -293,9 +281,7 @@ cv_df = pd.DataFrame(cv_results).sort_values('CV_mean', ascending=False).reset_i
 print(f"\n   CV ranking:\n{cv_df.round(4).to_string(index=False)}")
 
 
-# =============================================================================
 # 7. MODEL EVALUATION
-# =============================================================================
 print("\n" + "=" * 70)
 print("7. MODEL EVALUATION (on the test set)")
 print("=" * 70)
@@ -321,7 +307,7 @@ for name, model in models.items():
 eval_df = pd.DataFrame(eval_results).sort_values('F1', ascending=False).reset_index(drop=True)
 print(f"\n{eval_df.round(4).to_string(index=False)}")
 
-# --- Confusion matrices for every model ---
+# Confusion matrices for every model
 fig, axes = plt.subplots(2, 3, figsize=(16, 9))
 fig.suptitle('Confusion Matrices (test set)', fontsize=15, fontweight='bold')
 for ax, (name, pipe) in zip(axes.ravel(), fitted.items()):
@@ -334,7 +320,7 @@ plt.tight_layout()
 plt.savefig(os.path.join(OUT, 'confusion_matrices.png'), dpi=110, bbox_inches='tight')
 plt.close()
 
-# --- ROC curves ---
+# ROC curves
 plt.figure(figsize=(8, 7))
 ax = plt.gca()
 for name, pipe in fitted.items():
@@ -347,9 +333,7 @@ plt.close()
 print("\n   Plots: confusion_matrices.png, roc_curves.png")
 
 
-# =============================================================================
 # 8. FINE-TUNING AND VALIDATION
-# =============================================================================
 print("\n" + "=" * 70)
 print("8. FINE-TUNING (GridSearchCV)")
 print("=" * 70)
@@ -385,7 +369,7 @@ for name, (model, grid) in grids.items():
     print(f"      best CV accuracy: {gs.best_score_:.4f}")
     print(f"      best params: { {k.replace('clf__',''): v for k, v in gs.best_params_.items()} }")
 
-# --- Final model ---
+# Final model
 final_name = max(tuned, key=lambda k: tuned[k].best_score_)
 final_model = tuned[final_name].best_estimator_
 print(f"\n   >>> FINAL MODEL: {final_name} (CV={tuned[final_name].best_score_:.4f})")
@@ -404,7 +388,7 @@ print(f"\n{classification_report(y_test, y_pred, target_names=['Died', 'Survived
 cm = confusion_matrix(y_test, y_pred)
 print(f"   Confusion matrix:\n      TN={cm[0,0]}  FP={cm[0,1]}\n      FN={cm[1,0]}  TP={cm[1,1]}")
 
-# --- Feature importance (guarded by an attribute check) ---
+# Feature importance (guarded by an attribute check)
 clf = final_model.named_steps['clf']
 feat_names = final_model.named_steps['prep'].get_feature_names_out()
 
@@ -438,9 +422,7 @@ else:
     print("\n   Feature importance is not available for this model.")
 
 
-# =============================================================================
 # 9. DEPLOYMENT
-# =============================================================================
 print("\n" + "=" * 70)
 print("9. DEPLOYMENT")
 print("=" * 70)
@@ -481,9 +463,7 @@ for d in demos:
     print(f"      {label:28s} -> {status:16s} (p={r['probability']})")
 
 
-# =============================================================================
 # 10. DOCUMENTATION AND PRESENTATION
-# =============================================================================
 print("\n" + "=" * 70)
 print("10. SUMMARY")
 print("=" * 70)
@@ -506,4 +486,4 @@ print(f"""
 # Summary table of results
 eval_df.round(4).to_csv(os.path.join(OUT, 'model_comparison.csv'), index=False)
 print("   Comparison table: model_comparison.csv")
-print("=" * 70)
+print("=" * 70)
